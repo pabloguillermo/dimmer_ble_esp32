@@ -1,6 +1,6 @@
 # Dimmer BLE ESP32
 
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-GPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-ESP32-blue)
 
 Professional firmware for Bluetooth Low Energy (BLE) dimmer control on ESP32 boards. Features integrated authentication, data persistence, and physical button control.
@@ -143,7 +143,7 @@ build_flags = -DCORE_DEBUG_LEVEL=3
 
 ## 📝 License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for details.
 
 ## 👤 Author
 

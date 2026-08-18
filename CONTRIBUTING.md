@@ -60,11 +60,11 @@ Thank you for considering contributing to the Dimmer BLE ESP32 project! 🎉
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the same MIT license as the project.
+By contributing, you agree that your contributions are licensed under the same GNU General Public License v3.0 as the project.
 
 ## Licença
 
-Ao contribuir, você concorda que suas contribuições estão licenciadas sob a mesma licença MIT do projeto.
+Ao contribuir, você concorda que suas contribuições estão licenciadas sob a mesma GNU General Public License v3.0 do projeto.
 
 ---
 
