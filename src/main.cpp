@@ -3,162 +3,172 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
-#include <Preferences.h> // Upgrade para Preferences (substitui EEPROM)
+#include <Preferences.h> // Non-volatile storage (replaces EEPROM)
 
-// UUIDs Fixos
+// Fixed UUIDs
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-const uint8_t pin_led1 = 32;
-const uint8_t pin_mais = 34;
-const uint8_t pin_menos = 13;
-const uint8_t pin_liga = 26;
-uint32_t temporiza_botoes = 0;
-uint32_t tmp_pinmais = 0;
-uint32_t tmp_pinmenos = 0;
-uint32_t tmp_pinliga = 0;
-// Variáveis de Estado
-uint8_t porcentagem = 0;
-uint8_t estado_on = 1;
-char modo_atual = 'L';
-String nome_ble;
-uint16_t senha_cadastrada;
-const uint16_t SENHA_MESTRA = 1234;
+// GPIO Pin Definitions
+const uint8_t pin_pwm_output = 32;
+const uint8_t pin_increase = 34;
+const uint8_t pin_decrease = 13;
+const uint8_t pin_power = 26;
 
-bool deviceConnected = false;
-bool auth_ok = false;
-uint32_t timer_notificacao = 0;
-uint32_t timer_save = 0;
+uint32_t button_debounce_timer = 0;
+uint32_t increase_button_timer = 0;
+uint32_t decrease_button_timer = 0;
+uint32_t power_button_timer = 0;
+
+// State Variables
+uint8_t power_level = 0;           // 0-100%
+uint8_t power_state = 1;           // 1=on, 0=off
+char operation_mode = 'L';         // L=Linear, M=Maximum
+String ble_device_name;
+uint16_t stored_password;
+const uint16_t MASTER_PASSWORD = 1234;
+
+bool device_connected = false;
+bool authentication_ok = false;
+uint32_t notification_timer = 0;
+uint32_t save_timer = 0;
 bool pending_save = false;
 
 BLECharacteristic *pTxChar;
 Preferences prefs;
 
-// --- A SUA LÓGICA DE POTÊNCIA (PRESERVADA 100%) ---
-/*uint32_t calculaPWM(uint8_t valor) {
-  if (estado_on == 0 || valor == 0) return 4095; 
+// PWM Calculation Function
+// Original power calculation formula (preserved 100%)
+/*uint32_t calculatePWM(uint8_t value) {
+  if (power_state == 0 || value == 0) return 4095; 
 
-  if (modo_atual == 'M') {
-    if (valor <= 50) return 4095 - round((0.00018 * pow(valor, 3) + 79.9));
-    return 4095 - round((0.000000022 * pow(valor, 5) + 93.9));
+  if (operation_mode == 'M') {
+    if (value <= 50) return 4095 - round((0.00018 * pow(value, 3) + 79.9));
+    return 4095 - round((0.000000022 * pow(value, 5) + 93.9));
   } else {
-    if (valor <= 50) return 4095 - round((0.00018 * pow(valor, 3) + 63));
-    return 4095 -100 - round((0.000000022 * pow(valor, 5) + 75));
+    if (value <= 50) return 4095 - round((0.00018 * pow(value, 3) + 63));
+    return 4095 - 100 - round((0.000000022 * pow(value, 5) + 75));
   }
 }*/
-uint32_t calculaPWM(uint8_t valor) 
+
+uint32_t calculatePWM(uint8_t value) 
 {
-  if (estado_on == 0 || valor == 0) return 4095;
+  if (power_state == 0 || value == 0) return 4095;
   {
-      if (valor <= 25) {return map(valor, 1,25,4040,4020);}
-      if (valor <= 50) {return map(valor, 26,50,4020,4000);}
-      if (valor <= 98) {return map(valor, 26,50,4000,3950);}
+      if (value <= 25) {return map(value, 1, 25, 4040, 4020);}
+      if (value <= 50) {return map(value, 26, 50, 4020, 4000);}
+      if (value <= 98) {return map(value, 26, 50, 4000, 3950);}
       else {return 0;}
   }
-  /*else {
-        if (valor < 1) valor = 1;
-        if (valor > 100) valor = 100;
-        return (uint32_t)(8145-((0.00444444 * (uint32_t)valor * (uint32_t)valor) + (0.00111111 * (uint32_t)valor) + 4049.99444444));
-       }*/
 }
-// Callbacks de Comunicação do ESP32 BLE:
+
+// BLE Communication Callbacks
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pChar) {
     String rx = String(pChar->getValue().c_str());
     rx.trim();
     if (rx.length() == 0) return;
 
+    // Authentication command: p<password>
     if (rx.startsWith("p")) {
       uint16_t pass = (uint16_t)rx.substring(1).toInt();
-      if (pass == senha_cadastrada || (pass == SENHA_MESTRA && senha_cadastrada == 0xffff)) {
-        auth_ok = true;
-        Serial.println("Auth OK");
+      if (pass == stored_password || (pass == MASTER_PASSWORD && stored_password == 0xffff)) {
+        authentication_ok = true;
+        Serial.println("Authentication OK");
       } else {
-        Serial.println("Auth falhou");
-        ESP.restart(); // Senha errada reinicia por segurança
+        Serial.println("Authentication failed");
+        ESP.restart(); // Security: restart on wrong password
       }
       return;
     }
 
-    if (!auth_ok) return;
+    if (!authentication_ok) return;
 
+    // Power level command: c<0-100>
     if (rx.startsWith("c")) {
-      porcentagem = (uint8_t)rx.substring(1).toInt();
-      ledcWrite(pin_led1, calculaPWM(porcentagem));
-      pending_save = true; timer_save = millis(); 
+      power_level = (uint8_t)rx.substring(1).toInt();
+      ledcWrite(pin_pwm_output, calculatePWM(power_level));
+      pending_save = true; save_timer = millis(); 
     } 
+    // Power state command: s<0|1>
     else if (rx.startsWith("s")) {
-      estado_on = (rx.charAt(1) == '1') ? 1 : 0;
-      ledcWrite(pin_led1, calculaPWM(porcentagem));
-      pending_save = true; timer_save = millis();
+      power_state = (rx.charAt(1) == '1') ? 1 : 0;
+      ledcWrite(pin_pwm_output, calculatePWM(power_level));
+      pending_save = true; save_timer = millis();
     }
+    // Operation mode command: t<L|M>
     else if (rx.startsWith("t")) {
-      modo_atual = rx.charAt(1);
-      ledcWrite(pin_led1, calculaPWM(porcentagem));
-      pending_save = true; timer_save = millis();
+      operation_mode = rx.charAt(1);
+      ledcWrite(pin_pwm_output, calculatePWM(power_level));
+      pending_save = true; save_timer = millis();
     }
-    else if (rx.startsWith("w")) { // Gravar nova senha
-       senha_cadastrada = (uint16_t)rx.substring(1).toInt();
-       prefs.putUInt("senha", senha_cadastrada);
+    // Save new password command: w<password>
+    else if (rx.startsWith("w")) {
+       stored_password = (uint16_t)rx.substring(1).toInt();
+       prefs.putUInt("password", stored_password);
     }
-    else if (rx.startsWith("n")) { // Gravar novo nome e reiniciar
-       prefs.putString("nome", rx.substring(1));
+    // Set device name and restart command: n<name>
+    else if (rx.startsWith("n")) {
+       prefs.putString("name", rx.substring(1));
        delay(500); ESP.restart();
     }
   }
 };
 
 class ServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pS) { deviceConnected = true; }
+  void onConnect(BLEServer* pS) { 
+    device_connected = true; 
+  }
   void onDisconnect(BLEServer* pS) { 
-    deviceConnected = false; 
-    auth_ok = false; 
+    device_connected = false; 
+    authentication_ok = false; 
     BLEDevice::startAdvertising(); 
   }
 };
 
-void carregarConfig() {
+void loadConfiguration() {
   prefs.begin("dimmer", false);
   
-  porcentagem = prefs.getUChar("pot", 0);
-  estado_on = prefs.getUChar("est", 1);
-  modo_atual = (char)prefs.getUChar("mod", 'L');
-  senha_cadastrada = prefs.getUInt("senha", 1234);
-  nome_ble = prefs.getString("nome", "MeuDimmer");
+  power_level = prefs.getUChar("level", 0);
+  power_state = prefs.getUChar("state", 1);
+  operation_mode = (char)prefs.getUChar("mode", 'L');
+  stored_password = prefs.getUInt("password", 1234);
+  ble_device_name = prefs.getString("name", "MyDimmer");
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(1000); // Aumente para 1 segundo para estabilizar a fonte
-  Serial.println("--- Iniciando Leitura de Hardware ---");
+  delay(1000); // Allow time for power stabilization
+  Serial.println("--- Starting Hardware Initialization ---");
 
-  carregarConfig();
+  loadConfiguration();
 
-  //ledcAttachChannel(pin_led1, 1000, 12, 0); 
-  ledcWrite(pin_led1, calculaPWM(porcentagem));
+  ledcWrite(pin_pwm_output, calculatePWM(power_level));
 
-// Configuração dos pinos (Lembrando: 34 precisa de resistor externo!)
-  pinMode(pin_mais, INPUT);    // GPIO 34 (INPUT puro)
-  pinMode(pin_menos, INPUT_PULLUP);
-  pinMode(pin_liga, INPUT_PULLUP);
+  // Configure GPIO pins
+  // Note: GPIO 34 requires external pull-up resistor
+  pinMode(pin_increase, INPUT);
+  pinMode(pin_decrease, INPUT_PULLUP);
+  pinMode(pin_power, INPUT_PULLUP);
 
-  // Pequeno delay para os pull-ups internos "puxarem" a tensão para cima
-  delay(100); 
+  delay(100); // Allow internal pull-ups to stabilize
 
-  int v_mais = digitalRead(pin_mais);
-  int v_menos = digitalRead(pin_menos);
-  int v_liga = digitalRead(pin_liga);
+  // Read initial pin states
+  int v_increase = digitalRead(pin_increase);
+  int v_decrease = digitalRead(pin_decrease);
+  int v_power = digitalRead(pin_power);
 
-  Serial.printf("Status Inicial -> Mais: %d | Menos: %d | Liga: %d\n", v_mais, v_menos, v_liga);
+  Serial.printf("Initial Status -> Increase: %d | Decrease: %d | Power: %d\n", v_increase, v_decrease, v_power);
 
-  // Se algum estiver em 0 (pressionado ou erro de pull-up), avisa mas não reinicia ainda
-  if (v_mais == LOW || v_menos == LOW || v_liga == LOW) {
-    Serial.println("CUIDADO: Botão detectado como PRESSIONADO no boot!");
-    ESP.restart(); // Comente esta linha temporariamente para conseguir ver o log!
+  // Check for buttons pressed at startup
+  if (v_increase == LOW || v_decrease == LOW || v_power == LOW) {
+    Serial.println("WARNING: Button detected as PRESSED at startup!");
+    ESP.restart();
   }
 
-  BLEDevice::init(nome_ble.c_str());
+  // Initialize BLE
+  BLEDevice::init(ble_device_name.c_str());
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 
@@ -172,105 +182,105 @@ void setup() {
 
   pService->start();
   pServer->getAdvertising()->start();
-  Serial.println("Pronto - Hardware Ativo");
+  Serial.println("Ready - Hardware Active");
 }
 
 void loop() {
-  // Timer para salvar (Proteção da Memória Flash)
-  if (pending_save && (millis() - timer_save > 5000)) {
-    prefs.putUChar("pot", porcentagem);
-    prefs.putUChar("est", estado_on);
-    prefs.putUChar("mod", (uint8_t)modo_atual);
+  // Save timer: Protect flash memory from excessive writes
+  if (pending_save && (millis() - save_timer > 5000)) {
+    prefs.putUChar("level", power_level);
+    prefs.putUChar("state", power_state);
+    prefs.putUChar("mode", (uint8_t)operation_mode);
     pending_save = false;
-    Serial.println("Preferências salvas!");
+    Serial.println("Preferences saved!");
   }
 
-if ((millis() - temporiza_botoes) >= 3) 
-{
-  temporiza_botoes = millis();
+  // Button polling with debouncing (~3ms interval)
+  if ((millis() - button_debounce_timer) >= 3) 
+  {
+    button_debounce_timer = millis();
 
-  // BOTÃO MAIS (GPIO 34 - PRECISA DE RESISTOR EXTERNO 10K)
-  if (digitalRead(pin_mais) == LOW) 
-  {
-      tmp_pinmais++;
-  }
-  else 
-  {
-      if (tmp_pinmais >= 15) 
-      { // Debounce de ~45ms
-          if (porcentagem <= 90) 
+    // INCREASE BUTTON (GPIO 34 - REQUIRES 10K EXTERNAL PULL-UP)
+    if (digitalRead(pin_increase) == LOW) 
+    {
+        increase_button_timer++;
+    }
+    else 
+    {
+        if (increase_button_timer >= 15) 
+        { // Debounce ~45ms
+          if (power_level <= 90) 
           {
-              porcentagem = (porcentagem - (porcentagem % 10)) + 10;
+              power_level = (power_level - (power_level % 10)) + 10;
           } else {
-              porcentagem = 100;
+              power_level = 100;
           }
-          ledcWrite(pin_led1, calculaPWM(porcentagem)); // Atualiza o brilho na hora
-          pending_save = true; timer_save = millis();
-      }
-      tmp_pinmais = 0;
-  }
+          ledcWrite(pin_pwm_output, calculatePWM(power_level));
+          pending_save = true; save_timer = millis();
+        }
+        increase_button_timer = 0;
+    }
 
-  // BOTÃO MENOS
-  if (digitalRead(pin_menos) == LOW) 
-  {
-      tmp_pinmenos++;
-  } 
-  else 
-  {
-      if (tmp_pinmenos >= 15) 
-      { // Corrigido para tmp_pinmenos
-          if (porcentagem >= 10) 
+    // DECREASE BUTTON
+    if (digitalRead(pin_decrease) == LOW) 
+    {
+        decrease_button_timer++;
+    } 
+    else 
+    {
+        if (decrease_button_timer >= 15) 
+        { // Debounce ~45ms
+          if (power_level >= 10) 
           {
-              porcentagem = (porcentagem - (porcentagem % 10)) - 10;
+              power_level = (power_level - (power_level % 10)) - 10;
           }
           else 
           {
-              porcentagem = 0;
+              power_level = 0;
           }
-          ledcWrite(pin_led1, calculaPWM(porcentagem));
-          pending_save = true; timer_save = millis();
-      }
-      tmp_pinmenos = 0;
-  }
-
-  // BOTÃO LIGA/RESET
-  if (digitalRead(pin_liga) == LOW) 
-  {
-      tmp_pinliga++;
-  }
-  else 
-  {
-    // Toque rápido: Liga/Desliga
-    if (tmp_pinliga >= 15 && tmp_pinliga <= 1000) {
-        estado_on = !estado_on;
-        ledcWrite(pin_led1, calculaPWM(porcentagem));
-        pending_save = true; timer_save = millis();
-    } 
-    // Toque longo (3 segundos): Reset de Fábrica
-    else if (tmp_pinliga >= 1000 && !deviceConnected) {
-        prefs.clear(); // Apaga TUDO do namespace "dimmer"
-        Serial.println("Reset de Fábrica!");
-        delay(500); 
-        ESP.restart();
+          ledcWrite(pin_pwm_output, calculatePWM(power_level));
+          pending_save = true; save_timer = millis();
+        }
+        decrease_button_timer = 0;
     }
-    tmp_pinliga = 0;
+
+    // POWER BUTTON
+    if (digitalRead(pin_power) == LOW) 
+    {
+        power_button_timer++;
+    }
+    else 
+    {
+      // Short press: Toggle on/off
+      if (power_button_timer >= 15 && power_button_timer <= 1000) {
+          power_state = !power_state;
+          ledcWrite(pin_pwm_output, calculatePWM(power_level));
+          pending_save = true; save_timer = millis();
+      } 
+      // Long press (3 seconds): Factory reset
+      else if (power_button_timer >= 1000 && !device_connected) {
+          prefs.clear(); // Erase all "dimmer" namespace data
+          Serial.println("Factory Reset!");
+          delay(500); 
+          ESP.restart();
+      }
+      power_button_timer = 0;
+    }
   }
-}
 
-
-  // Notificação de Sincronismo para o App
-  if (deviceConnected && (millis() - timer_notificacao > 1000)) {
-    timer_notificacao = millis();
+  // Synchronization Notifications to App
+  if (device_connected && (millis() - notification_timer > 1000)) {
+    notification_timer = millis();
     
-    pTxChar->setValue(String(porcentagem).c_str());
+    pTxChar->setValue(String(power_level).c_str());
     pTxChar->notify();
     
     delay(20);
-    pTxChar->setValue(("t" + String(modo_atual)).c_str());
+    pTxChar->setValue(("t" + String(operation_mode)).c_str());
     pTxChar->notify();
 
     delay(20);
-    pTxChar->setValue(("s" + String(estado_on)).c_str());
+    pTxChar->setValue(("s" + String(power_state)).c_str());
     pTxChar->notify();
   }
 }

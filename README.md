@@ -3,95 +3,95 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-ESP32-blue)
 
-Firmware profissional para controle de dimmer por Bluetooth Low Energy (BLE) em placas ESP32. Sistema de autenticação integrado, persistência de dados e controle via botões físicos.
+Professional firmware for Bluetooth Low Energy (BLE) dimmer control on ESP32 boards. Features integrated authentication, data persistence, and physical button control.
 
-## 📋 Descrição
+## 📋 Description
 
-Este projeto implementa um dimmer inteligente (controlador de potência PWM) com interface BLE. Permite controlar a intensidade de iluminação/carga via aplicativo mobile ou botões físicos na placa, com autenticação por senha e salvamento automático de configurações.
+This project implements an intelligent dimmer (PWM power controller) with BLE interface. It allows controlling light intensity/load via mobile app or physical buttons on the board, with password authentication and automatic configuration saving.
 
-### ✨ Funcionalidades
+### ✨ Features
 
-- **Controle BLE**: Comunicação bidirecional via Bluetooth Low Energy
-- **Autenticação**: Sistema de autenticação com senha configurável
-- **Persistência**: Salvamento automático de estado e configurações usando Preferences
-- **Controle Físico**: 3 botões para ajuste manual (mais, menos, liga/desliga)
-- **PWM Dinâmico**: Calibração avançada de potência com múltiplos modos
-- **Notificações**: Feedback em tempo real dos estados via BLE
-- **Segurança**: Reinicialização automática em caso de falha de autenticação
+- **BLE Control**: Bidirectional communication via Bluetooth Low Energy
+- **Authentication**: Configurable password-based authentication system
+- **Persistence**: Automatic state and configuration saving using Preferences
+- **Physical Control**: 3 buttons for manual adjustment (increase, decrease, on/off)
+- **Dynamic PWM**: Advanced power calibration with multiple modes
+- **Notifications**: Real-time state feedback via BLE
+- **Security**: Automatic restart on authentication failure
 
-## 🔧 Configuração de Hardware
+## 🔧 Hardware Configuration
 
-### Pinagem (ESP32 WROOM32)
+### Pin Assignment (ESP32 WROOM32)
 
-| Função | GPIO | Tipo |
-|--------|------|------|
-| Saída PWM Dimmer | 32 | Digital Output |
-| Botão Mais | 34 | Digital Input |
-| Botão Menos | 13 | Digital Input |
-| Botão Liga/Desliga | 26 | Digital Input |
+| Function | GPIO | Type |
+|----------|------|------|
+| Dimmer PWM Output | 32 | Digital Output |
+| Increase Button | 34 | Digital Input |
+| Decrease Button | 13 | Digital Input |
+| Power Button | 26 | Digital Input |
 
-### Requisitos
+### Requirements
 
-- **Placa**: ESP32 WROOM32 ou compatível
-- **Tensão**: 5V USB ou fonte externa
-- **Periféricos**: 3 botões tacteis, resistores pull-up (opcional)
+- **Board**: ESP32 WROOM32 or compatible
+- **Power**: 5V USB or external supply
+- **Peripherals**: 3 tactile buttons, pull-up resistors (optional)
 
-## 📦 Estrutura do Projeto
+## 📦 Project Structure
 
 ```
 dimmer_ble_esp32/
 ├── src/
-│   └── main.cpp          # Firmware principal
-├── include/              # Headers customizados (vazio por padrão)
-├── lib/                  # Bibliotecas locais (vazio por padrão)
-├── test/                 # Testes (estrutura PlatformIO)
-├── platformio.ini        # Configuração de compilação
-├── .gitignore           # Git ignore rules
-└── README.md            # Este arquivo
+│   └── main.cpp          # Main firmware
+├── include/              # Custom headers (empty by default)
+├── lib/                  # Local libraries (empty by default)
+├── test/                 # Tests (PlatformIO structure)
+├── platformio.ini        # Build configuration
+├── .gitignore            # Git ignore rules
+└── README.md             # This file
 ```
 
-## 🚀 Como Compilar e Gravar
+## 🚀 Compilation and Upload
 
-### Pré-requisitos
+### Prerequisites
 
-- VS Code instalado
-- Extensão PlatformIO IDE instalada
-- Drivers USB CH340/CP2102 (para upload via serial)
+- VS Code installed
+- PlatformIO IDE extension installed
+- USB drivers CH340/CP2102 (for serial upload)
 
-### Passos
+### Steps
 
-1. **Clonar o repositório**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/pabloguillermo/dimmer_ble_esp32.git
    cd dimmer_ble_esp32
    ```
 
-2. **Abrir no VS Code**
+2. **Open in VS Code**
    ```bash
    code .
    ```
 
-3. **Compilar**
-   - Menu PlatformIO → Build, ou
+3. **Build**
+   - PlatformIO menu → Build, or
    ```bash
    pio run
    ```
 
-4. **Gravar na placa**
-   - Menu PlatformIO → Upload, ou
+4. **Upload to board**
+   - PlatformIO menu → Upload, or
    ```bash
    pio run -t upload
    ```
 
-5. **Monitorar serial (debug)**
-   - Menu PlatformIO → Device Monitor, ou
+5. **Monitor serial (debug)**
+   - PlatformIO menu → Device Monitor, or
    ```bash
    pio device monitor
    ```
 
-## 📡 Protocolo BLE
+## 📡 BLE Protocol
 
-### UUIDs Fixos
+### Fixed UUIDs
 
 ```
 Service UUID:        6E400001-B5A3-F393-E0A9-E50E24DCCA9E
@@ -99,55 +99,69 @@ RX Characteristic:   6E400002-B5A3-F393-E0A9-E50E24DCCA9E
 TX Characteristic:   6E400003-B5A3-F393-E0A9-E50E24DCCA9E
 ```
 
-### Comandos Suportados
+### Supported Commands
 
-| Comando | Formato | Descrição | Exemplo |
-|---------|---------|-----------|---------|
-| Autenticação | `p<senha>` | Envia senha (4 dígitos) | `p1234` |
-| Potência | `c<0-100>` | Define porcentagem | `c75` |
-| Liga/Desliga | `s<0\|1>` | 0=desliga, 1=liga | `s1` |
-| Modo | `t<L\|M>` | Linear ou Máximo | `tL` |
+| Command | Format | Description | Example |
+|---------|--------|-------------|---------|
+| Authentication | `p<password>` | Send password (4 digits) | `p1234` |
+| Power Level | `c<0-100>` | Set percentage | `c75` |
+| Power | `s<0\|1>` | 0=off, 1=on | `s1` |
+| Mode | `t<L\|M>` | Linear or Maximum | `tL` |
 
-**Nota**: Requer autenticação antes de executar comandos.
+**Note**: Requires authentication before executing commands.
 
-## 🔐 Autenticação
+## 🔐 Authentication
 
-- Senha padrão: `1234` (configurável via Preferences)
-- Senha mestra: `1234` (sempre funciona se nenhuma foi configurada)
-- Falha de autenticação: Reinicia a placa automaticamente
+- Default password: `1234` (configurable via Preferences)
+- Master password: `1234` (always works if no password is set)
+- Authentication failure: Board automatically restarts
 
-## 📊 Variáveis de Estado Persistentes
+## 📊 Persistent State Variables
 
-As seguintes informações são salvas automaticamente e recuperadas ao reiniciar:
+The following information is automatically saved and recovered on restart:
 
-- Porcentagem de potência (0-100)
-- Estado (ligado/desligado)
-- Modo de operação (Linear/Máximo)
-- Senha cadastrada
+- Power percentage (0-100)
+- State (on/off)
+- Operation mode (Linear/Maximum)
+- Registered password
 
-## 🛠️ Desenvolvimento
+## 🛠️ Development
 
-### Estrutura de Código
+### Code Structure
 
-- **setup()**: Inicialização de GPIO, BLE e persistência
-- **loop()**: Processamento de botões, timers e sincronização
-- **calculaPWM()**: Função de mapeamento não-linear de PWM
-- **Callbacks BLE**: Processamento de comandos via Bluetooth
+- **setup()**: GPIO, BLE, and persistence initialization
+- **loop()**: Button processing, timers, and synchronization
+- **calculaPWM()**: Non-linear PWM mapping function
+- **BLE Callbacks**: Bluetooth command processing
 
-### Compilar com Debug
+### Build with Debug
 
-Descomente em `platformio.ini`:
+Uncomment in `platformio.ini`:
 ```ini
 build_flags = -DCORE_DEBUG_LEVEL=3
 ```
 
-## 📝 Licença
+## 📝 License
 
-Este projeto está licenciado sob a licença MIT. Veja [LICENSE](LICENSE) para detalhes.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-## 👤 Autor
+## 👤 Author
 
 Pablo Guillermo - [GitHub](https://github.com/pabloguillermo)
+
+## 🐛 Report Issues
+
+Found a bug? Open an [issue](https://github.com/pabloguillermo/dimmer_ble_esp32/issues) on GitHub.
+
+## 📚 References
+
+- [ESP32 Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/)
+- [PlatformIO Docs](https://docs.platformio.org/)
+- [BLE Specification](https://www.bluetooth.com/specifications/specs/)
+
+---
+
+**Last Updated**: August 2026
 
 ## 🐛 Reportar Problemas
 

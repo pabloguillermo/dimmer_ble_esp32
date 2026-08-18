@@ -1,47 +1,47 @@
 # Changelog
 
-Todas as mudanças notáveis neste projeto estão documentadas neste arquivo.
+All notable changes to this project are documented in this file.
 
-O formato é baseado em [Keep a Changelog](https://keepachangelog.com/),
-e este projeto segue [Semantic Versioning](https://semver.org/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.0.0] - 2026-08-18
 
 ### Added
-- Firmware inicial para controle de dimmer BLE em ESP32
-- Suporte a Bluetooth Low Energy (BLE) com autenticação
-- Sistema de persistência usando Preferences
-- Controle físico via 3 botões (mais, menos, liga/desliga)
-- Calibração dinâmica de PWM
-- Notificações BLE em tempo real
-- Segurança com reinicialização em falha de autenticação
-- Documentação completa e exemplos
-- CI/CD com GitHub Actions
-- Estrutura profissional do projeto
+- Initial firmware for BLE dimmer control on ESP32
+- Bluetooth Low Energy (BLE) support with authentication
+- Persistence system using Preferences
+- Physical control via 3 buttons (increase, decrease, power)
+- Dynamic PWM calibration
+- Real-time BLE notifications
+- Security with automatic restart on authentication failure
+- Complete documentation and examples
+- CI/CD with GitHub Actions
+- Professional project structure
 
 ### Features
-- Protocolo BLE com UUIDs fixos
-- Comandos: autenticação, potência, liga/desliga, modo
-- Salvamento automático de configurações
-- Modo debug com logs seriais
-- Suporte a múltiplas placas ESP32
+- BLE protocol with fixed UUIDs
+- Commands: authentication, power level, on/off, mode
+- Automatic configuration saving
+- Debug mode with serial logs
+- Support for multiple ESP32 boards
 
-## [Planejado] - Próximas Versões
+## [Planned] - Future Versions
 
-### Em Desenvolvimento
-- [ ] Aplicativo mobile para iOS/Android
-- [ ] Interface web para configuração
-- [ ] Suporte a múltiplos dimmers em rede
-- [ ] Scheduling/automação de horários
-- [ ] Sincronização com Home Assistant
-- [ ] Modo low-power/sleep
+### In Development
+- [ ] Mobile app for iOS/Android
+- [ ] Web interface for configuration
+- [ ] Multi-dimmer network support
+- [ ] Scheduling/automation features
+- [ ] Home Assistant integration
+- [ ] Low-power/sleep mode
 
-### Considerado
-- Gerador de código QR para emparelhamento rápido
-- Logs de histórico de uso
-- API REST
+### Considered
+- QR code generator for quick pairing
+- Usage history logging
+- REST API
 
 ---
 
 **Maintainer**: Pablo Guillermo  
-**Repositório**: https://github.com/pabloguillermo/dimmer_ble_esp32
+**Repository**: https://github.com/pabloguillermo/dimmer_ble_esp32

@@ -1,62 +1,66 @@
-# Guia de Contribuição
+# Contributing Guide
 
-Obrigado por considerar contribuir para o projeto Dimmer BLE ESP32! 🎉
+Thank you for considering contributing to the Dimmer BLE ESP32 project! 🎉
 
-## Como Contribuir
+## How to Contribute
 
-### Reportar Bugs
+### Report Bugs
 
-1. Verifique se o bug já foi reportado em [Issues](https://github.com/pabloguillermo/dimmer_ble_esp32/issues)
-2. Se for novo, abra uma issue com:
-   - Título descritivo
-   - Descrição clara do problema
-   - Passos para reproduzir
-   - Resultado esperado vs. resultado atual
-   - Versão da placa ESP32 e ambiente
+1. Check if the bug has already been reported in [Issues](https://github.com/pabloguillermo/dimmer_ble_esp32/issues)
+2. If not, open a new issue with:
+   - Descriptive title
+   - Clear problem description
+   - Steps to reproduce
+   - Expected vs. actual behavior
+   - ESP32 board version and environment details
 
-### Sugerir Melhorias
+### Suggest Improvements
 
-- Abra uma [Issue](https://github.com/pabloguillermo/dimmer_ble_esp32/issues) com o rótulo `enhancement`
-- Descreva a motivação e caso de uso
-- Explique a solução proposta
+- Open an [Issue](https://github.com/pabloguillermo/dimmer_ble_esp32/issues) with the `enhancement` label
+- Describe the motivation and use case
+- Explain the proposed solution
 
-### Submeter Código
+### Submit Code
 
-1. **Fork** o repositório
-2. Crie uma branch com nome descritivo:
+1. **Fork** the repository
+2. Create a branch with a descriptive name:
    ```bash
-   git checkout -b feature/sua-feature
-   # ou
-   git checkout -b fix/seu-bugfix
+   git checkout -b feature/your-feature
+   # or
+   git checkout -b fix/your-bugfix
    ```
-3. Faça commits claros:
+3. Make clear commits:
    ```bash
-   git commit -m "Descrição clara da mudança"
+   git commit -m "Clear description of changes"
    ```
-4. Teste suas mudanças:
+4. Test your changes:
    ```bash
    pio run
    pio run -t upload
    ```
-5. Push na sua branch:
+5. Push to your branch:
    ```bash
-   git push origin feature/sua-feature
+   git push origin feature/your-feature
    ```
-6. Abra um **Pull Request** descrevendo as mudanças
+6. Open a **Pull Request** describing the changes
 
-## Padrões de Código
+## Code Standards
 
-- Use indentação de 2 espaços
-- Comente código complexo em português/inglês
-- Siga o estilo do código existente
-- Evite linhas com mais de 100 caracteres
-- Use nomes descritivos para variáveis
+- Use 2-space indentation
+- Comment complex code in English
+- Follow existing code style
+- Avoid lines longer than 100 characters
+- Use descriptive variable names
 
-## Processo de Review
+## Review Process
 
-- Todas as PRs serão revisadas antes de merge
-- Pode ser necessário fazer ajustes
-- Feedback será fornecido de forma construtiva
+- All PRs will be reviewed before merging
+- Adjustments may be required
+- Feedback will be constructive
+
+## License
+
+By contributing, you agree that your contributions are licensed under the same MIT license as the project.
 
 ## Licença
 
