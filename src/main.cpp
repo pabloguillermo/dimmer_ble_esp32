@@ -135,7 +135,7 @@ void setup() {
 
   carregarConfig();
 
-  ledcAttachChannel(pin_led1, 1000, 12, 0); 
+  //ledcAttachChannel(pin_led1, 1000, 12, 0); 
   ledcWrite(pin_led1, calculaPWM(porcentagem));
 
 // Configuração dos pinos (Lembrando: 34 precisa de resistor externo!)
